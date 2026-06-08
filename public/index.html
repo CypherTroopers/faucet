@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ColossusX Testnet Faucet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 720px;
+      margin: 60px auto;
+      padding: 0 20px;
+      background: #f7f7f7;
+    }
+
+    .card {
+      background: white;
+      padding: 28px;
+      border-radius: 14px;
+      box-shadow: 0 6px 24px rgba(0,0,0,.08);
+    }
+
+    h1 {
+      margin-top: 0;
+    }
+
+    input, button {
+      width: 100%;
+      box-sizing: border-box;
+      font-size: 16px;
+      padding: 14px;
+      margin-top: 12px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: bold;
+      border: none;
+    }
+
+    .primary {
+      background: #111;
+      color: white;
+    }
+
+    .secondary {
+      background: #2f6fed;
+      color: white;
+    }
+
+    .info {
+      background: #f1f3f5;
+      padding: 14px;
+      border-radius: 10px;
+      margin: 18px 0;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      background: #111;
+      color: #eee;
+      padding: 16px;
+      border-radius: 10px;
+      margin-top: 18px;
+      overflow-x: auto;
+    }
+
+    a {
+      color: #2f6fed;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>ColossusX Testnet Faucet</h1>
+    <p>Enter your testnet wallet address and request CLX test coins.</p>
+
+    <div class="info">
+      <strong>Network:</strong> ColossusX test Net<br>
+      <strong>Chain ID:</strong> 1919454<br>
+      <strong>Currency:</strong> CLX<br>
+      <strong>RPC:</strong> https://rpc.make-cph-great-again.community<br>
+      <strong>Explorer:</strong>
+      <a href="https://exp.make-cph-great-again.community" target="_blank" rel="noopener noreferrer">
+        https://exp.make-cph-great-again.community
+      </a>
+    </div>
+
+    <button id="addRpcButton" class="secondary">
+      Add ColossusX Testnet RPC
+    </button>
+
+    <input id="address" placeholder="0x..." />
+
+    <button id="faucetButton" class="primary">
+      Request CLX test coins
+    </button>
+
+    <pre id="result">Ready</pre>
+  </div>
+
+  <script>
+    const result = document.getElementById("result");
+
+    const COLX_CHAIN = {
+      chainId: "0x1d49de",
+      chainName: "ColossusX test Net",
+      nativeCurrency: {
+        name: "CLX",
+        symbol: "CLX",
+        decimals: 18
+      },
+      rpcUrls: [
+        "https://rpc.make-cph-great-again.community"
+      ],
+      blockExplorerUrls: [
+        "https://exp.make-cph-great-again.community"
+      ]
+    };
+
+    function log(message) {
+      result.textContent = message;
+      console.log(message);
+    }
+
+    async function addColossusXNetwork() {
+      log("Button clicked. Checking wallet...");
+
+      if (typeof window.ethereum === "undefined") {
+        log(
+          "Wallet not found.\n\n" +
+          "Please install MetaMask or open this page in a wallet browser.\n\n" +
+          "If you are using mobile, open this site inside the MetaMask browser."
+        );
+        return;
+      }
+
+      try {
+        log("Requesting account access...");
+
+        await window.ethereum.request({
+          method: "eth_requestAccounts"
+        });
+
+        log("Requesting wallet_addEthereumChain...");
+
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [COLX_CHAIN]
+        });
+
+        log("ColossusX test Net RPC added successfully.");
+
+        try {
+          await window.ethereum.request({
+            method: "wallet_switchEthereumChain",
+            params: [{ chainId: COLX_CHAIN.chainId }]
+          });
+
+          log("ColossusX test Net RPC added and switched successfully.");
+        } catch (switchErr) {
+          log(
+            "RPC added, but network switch failed.\n\n" +
+            (switchErr.message || String(switchErr))
+          );
+        }
+      } catch (err) {
+        log(
+          "Failed to add RPC.\n\n" +
+          "Code: " + (err.code || "unknown") + "\n" +
+          "Message: " + (err.message || String(err))
+        );
+      }
+    }
+
+    async function requestFaucet() {
+      const address = document.getElementById("address").value.trim();
+
+      log("Sending faucet request...");
+
+      try {
+        const res = await fetch("/faucet", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ address })
+        });
+
+        const data = await res.json();
+
+        if (data.ok && data.txHash) {
+          log(
+            "Success!\n\n" +
+            "Amount: " + data.amount + " CLX\n" +
+            "To: " + data.to + "\n" +
+            "Tx Hash: " + data.txHash + "\n\n" +
+            "Explorer:\n" +
+            "https://exp.make-cph-great-again.community/tx/" + data.txHash
+          );
+        } else {
+          log(JSON.stringify(data, null, 2));
+        }
+      } catch (err) {
+        log(err.message || String(err));
+      }
+    }
+
+    document.getElementById("addRpcButton").addEventListener("click", addColossusXNetwork);
+    document.getElementById("faucetButton").addEventListener("click", requestFaucet);
+
+    log("Ready. JavaScript loaded.");
+  </script>
+</body>
+</html>
